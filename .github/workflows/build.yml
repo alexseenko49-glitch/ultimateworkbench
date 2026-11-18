@@ -1,0 +1,57 @@
+
+name: Build UltimateMod
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ultimatemod-source.zip'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Extract ZIP
+        run: |
+          mkdir project
+          unzip -q ultimatemod-source.zip -d project
+
+      - name: Build mod
+        run: |
+          FILE=$(find project -type f \( -name build.gradle -o -name build.gradle.kts \) | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "Gradle build file not found"
+            exit 1
+          fi
+          ROOT=$(dirname "$FILE")
+          cd "$ROOT"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew build
+          else
+            gradle build
+          fi
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltimateMod-JAR
+          path: project/**/build/libs/*.jar
+          if-no-files-found: error
+          
